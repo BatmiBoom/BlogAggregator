@@ -6,62 +6,67 @@ import (
 	"os"
 )
 
-const configFileName = ".gatorconfig.json"
+const ConfigFileName string = "gator.json"
 
 type Config struct {
-	DBUrl           string `json:"db_url"`
-	CurrentUserName string `json:"current_user_name"`
+	Db_url           string `json:"db_url"`
+	Current_username string `json:"current_username"`
 }
 
-func (cfg *Config) SetUser(user_name string) error {
-	path, err := getConfigFilePath()
+func (cfg *Config) SetUser(username string) error {
+	config_path, err := getConfigPath()
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return fmt.Errorf("ERROR: Obtaining the config file %s", err)
 	}
 
-	cfg.CurrentUserName = user_name
-
-	handler, err := os.OpenFile(path, os.O_WRONLY, 0644)
+	file, err := os.OpenFile(config_path, os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("ERROR: opening file %v", err)
+		return fmt.Errorf("ERROR: Opening config file %s", err)
 	}
+	defer file.Close()
 
-	jsonString, err := json.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("ERROR: converting struct %v", err)
-	}
+	cfg.Current_username = username
 
-	_, err = handler.Write(jsonString)
-	if err != nil {
-		return fmt.Errorf("ERROR: writing file %v", err)
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(cfg); err != nil {
+		return fmt.Errorf("ERROR: Writing to file %s", err)
 	}
 
 	return nil
 }
 
-func Read() (*Config, error) {
-	path, err := getConfigFilePath()
+func ReadConfig() (Config, error) {
+	config_path, err := getConfigPath()
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-	stringContent, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("ERROR: reading config file %v", err)
+		return Config{}, err
 	}
 
-	config := Config{}
-	err = json.Unmarshal(stringContent, &config)
+	file, err := os.Open(config_path)
 	if err != nil {
-		return nil, fmt.Errorf("ERROR: Marshalling config %v", err)
+		return Config{}, err
+	}
+	defer file.Close()
+
+	var cfg Config
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&cfg); err != nil {
+		return cfg, fmt.Errorf("ERROR: Decoding json %s", err)
 	}
 
-	return &config, nil
+	return cfg, nil
 }
 
-func getConfigFilePath() (string, error) {
-	homeDirectory, err := os.UserHomeDir()
+func getConfigPath() (string, error) {
+	home_dir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("ERROR: wrong path %v", err)
+		return "", err
 	}
-	return fmt.Sprintf("%s/workspace/github.com/batmiboom/blog_aggregator/%s", homeDirectory, configFileName), nil
+
+	config_path := home_dir + "/.config/" + ConfigFileName
+	if !CheckFileExists(config_path) {
+		return "", fmt.Errorf("Config file doesn't exists, check in path : %s", config_path)
+	}
+
+	return config_path, nil
 }
