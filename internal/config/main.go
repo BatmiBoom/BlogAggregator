@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-const ConfigFileName string = "gator.json"
+const ConfigFileName string = ".gatorconfig.json"
 
 type Config struct {
 	Db_url           string `json:"db_url"`
@@ -42,6 +42,7 @@ func ReadConfig() (Config, error) {
 		return Config{}, err
 	}
 
+	fmt.Println(config_path)
 	file, err := os.Open(config_path)
 	if err != nil {
 		return Config{}, err
@@ -63,8 +64,8 @@ func getConfigPath() (string, error) {
 		return "", err
 	}
 
-	config_path := home_dir + "/.config/" + ConfigFileName
-	if !CheckFileExists(config_path) {
+	config_path := home_dir + "/" + ConfigFileName
+	if !fileExists(config_path) {
 		return "", fmt.Errorf("Config file doesn't exists, check in path : %s", config_path)
 	}
 

@@ -1,12 +1,8 @@
 package config
 
-import (
-	"errors"
-	"os"
-)
+import "os"
 
-func CheckFileExists(path string) bool {
-	_, error := os.Stat(path)
-
-	return !errors.Is(error, os.ErrNotExist)
+func fileExists(filename string) bool {
+	_, err := os.Lstat(filename)
+	return !os.IsNotExist(err)
 }
